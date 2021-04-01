@@ -49,9 +49,30 @@ module.exports = {
 
   async alterarUsuario(_, { filtro, dados }) {
     try {
+      const usuario = await obterUsuario(_, { filtro })
 
+      if (usuario) {
+        const { id } = usuario
+        
+        if (dados.perfis) {
+          await db('usuarios_perfis').where({usuario_id: id}).delete()
 
-      return perfil
+          for(filtroPerfil of dados.perfis) {
+            const perfil = await obterPerfil(_, {
+              filtro: { ...filtroPerfil }
+            })
+            if (perfil) {
+              await db('usuarios_perfis').insert({
+                usuario_id: id, perfil_id: perfil.id
+              })
+            }
+          }
+        }
+        
+        delete dados.perfis
+        await db('usuarios').where({ id }).update(dados)
+      }
+      return !usuario ? null : { ...usuario, ...dados }
     } catch(e) {
       throw new Error(e.sqlMessage)
     }
